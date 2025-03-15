@@ -3,8 +3,8 @@ import requests
 
 # ThingSpeak channel details
 channel_id = "2877004"
-write_api_key = "YOUR_WRITE_API_KEY"
-read_api_key = "YOUR_READ_API_KEY"
+write_api_key = "3VI96UKBSDR2T4BC"
+read_api_key = "00YSVLHONG1542DI"
 
 # Function to send data to ThingSpeak
 def send_data():
