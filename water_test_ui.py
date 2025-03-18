@@ -38,7 +38,7 @@ canvas.pack(fill="both", expand=True)
 canvas.create_image(187, 333, image=bg_photo, anchor="center")
 
 # Load and place logo
-logo_image = Image.open("safewaterlogo.png")  # Replace with actual logo filename
+logo_image = Image.open("safewaterlogo.png")  
 logo_image = logo_image.resize((100, 100))
 logo_photo = ImageTk.PhotoImage(logo_image)
 canvas.create_image(187, 80, image=logo_photo, anchor="center")
