@@ -1,53 +1,81 @@
 import tkinter as tk
-from tkinter import Toplevel
+from tkinter import Toplevel, messagebox
 from PIL import Image, ImageTk
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import requests
 import threading
 import time
+import serial
+import itertools  # For rotating spinner animation
+
+# Configure serial connection to Arduino (Update port as needed)
+try:
+    arduino = serial.Serial("/dev/ttyUSB0", 9600, timeout=1)  # Change to correct port
+    time.sleep(2)  # Allow connection to initialize
+    print("Arduino connected!")
+except Exception as e:
+    print(f"Could not connect to Arduino: {e}")
+    arduino = None  # Handle case where Arduino isn't connected
 
 # ThingSpeak channel details
-channel_id = "2877004"  
-read_api_key = "00YSVLHONG1542DI" 
+channel_id = "2877004"
+read_api_key = "00YSVLHONG1542DI"
 
-# Function to fetch the latest data from ThingSpeak
-def fetch_sensor_data():
-    url = f"https://api.thingspeak.com/channels/{channel_id}/feeds.json?api_key={read_api_key}&results=1"
+# Function to check if ThingSpeak is receiving data
+def check_sensor_connection():
+    url = f"https://api.thingspeak.com/channels/2877004/feeds.json?api_key=00YSVLHONG1542DI&results=1"
     response = requests.get(url)
+
     if response.status_code == 200:
         data = response.json()
-        if data['feeds']:
-            sensor_data = data['feeds'][0]['field1']  # Assuming field1 is where the sensor data is stored
-            return float(sensor_data)
-    return None
+        if data['feeds'] and data['feeds'][0]['field1'] is not None:
+            return True  # Sensor is working
+    return False  # Sensor is not sending data
 
-# Create main window
-root = tk.Tk()
-root.title("Water Testing App")
-root.geometry("375x667")  # Fixed size like a mobile app
-root.resizable(False, False)
+# Show a loading screen with an animated spinner
+def show_loading_screen():
+    loading_window = Toplevel(root)
+    loading_window.title("Measuring...")
+    loading_window.geometry("250x150")
+    loading_window.resizable(False, False)
 
-# Load and set background image
-bg_image = Image.open("backgroundblue.jpg")  # Replace with actual image
-bg_image = bg_image.resize((375, 667))
-bg_photo = ImageTk.PhotoImage(bg_image)
+    label = tk.Label(loading_window, text="Measuring...\nPlease wait", font=("Glacial-Indifference", 14))
+    label.pack(pady=20)
 
-canvas = tk.Canvas(root, width=375, height=667)
-canvas.pack(fill="both", expand=True)
-canvas.create_image(187, 333, image=bg_photo, anchor="center")
+    spinner_label = tk.Label(loading_window, font=("Glacial-Indifference", 20))
+    spinner_label.pack()
 
-# Load and place logo
-logo_image = Image.open("safewaterlogo.png")  
-logo_image = logo_image.resize((100, 100))
-logo_photo = ImageTk.PhotoImage(logo_image)
-canvas.create_image(187, 80, image=logo_photo, anchor="center")
+    spinner_frames = itertools.cycle(["◐", "◓", "◑", "◒"])  # Spinner animation cycle
 
-# Title Text
-canvas.create_text(187, 160, text="SafeWater Monitor", font=("Helvetica", 20, "bold"), fill="black")
-canvas.create_text(187, 200, text="Pure Water, Pure Peace\nSafeguarding Your Health, One Drop at a Time", 
-                   font=("Helvetica", 14), fill="black")
+    def update_spinner():
+        spinner_label.config(text=next(spinner_frames))
+        loading_window.after(200, update_spinner)  # Update every 200ms
 
+    update_spinner()
+    root.update()
+    return loading_window  # Return the window to close it later
+
+# Function to start measurement
+def start_measurement():
+    if arduino:
+        loading_screen = show_loading_screen()  # Show loading popup
+        arduino.write(b"START\n")  # Send start command to Arduino
+        print("Measurement started!")
+        
+        time.sleep(3)  # Simulate delay for data upload
+
+        if not check_sensor_connection():
+            loading_screen.destroy()
+            messagebox.showerror("Sensor Error", "Sensor is not connected or not sending data!")
+            return
+
+        loading_screen.destroy()  # Close loading popup
+        open_sensor_data_screen()  # Open the data screen
+    else:
+        messagebox.showerror("Connection Error", "Arduino is not connected!")
+
+# Function to open sensor data screen and display readings
 def open_sensor_data_screen():
     """Open a new window to display real-time sensor data graph."""
     data_window = Toplevel(root)
@@ -56,8 +84,7 @@ def open_sensor_data_screen():
     data_window.resizable(False, False)
 
     # Load background image
-    data_bg_image = Image.open("backgroundblue.jpg")  
-    data_bg_image = data_bg_image.resize((375, 667))
+    data_bg_image = Image.open("backgroundblue.jpg").resize((375, 667))
     data_bg_photo = ImageTk.PhotoImage(data_bg_image)
 
     data_canvas = tk.Canvas(data_window, width=375, height=667)
@@ -73,7 +100,7 @@ def open_sensor_data_screen():
     def update_graph():
         """Update graph with real-time sensor data."""
         while True:
-            sensor_value = fetch_sensor_data()  # Get data from ThingSpeak
+            sensor_value = fetch_sensor_data()  # Get latest data from ThingSpeak
             if sensor_value is not None:
                 time_values.append(len(time_values) * 0.5)
                 sensor_values.append(sensor_value)
@@ -85,7 +112,7 @@ def open_sensor_data_screen():
                 ax.legend()
                 ax.grid(True)
                 canvas_graph.draw()
-            time.sleep(30)  # Update every 30 seconds
+            time.sleep(5)  # Update every 5 seconds
 
     # Embed Matplotlib graph in Tkinter
     canvas_graph = FigureCanvasTkAgg(fig, master=data_window)
@@ -97,16 +124,48 @@ def open_sensor_data_screen():
     threading.Thread(target=update_graph, daemon=True).start()
 
     # Add "Back" button
-    back_button = tk.Button(data_window, text="Back", command=data_window.destroy, font=("Helvetica", 14), bg="white")
+    back_button = tk.Button(data_window, text="Back", command=data_window.destroy, font=("Glacial-Indifference", 14), bg="white")
     data_canvas.create_window(187, 600, window=back_button)
 
-# Create Start Measurement Button
-start_button = tk.Button(root, text="Start Measurement", font=("Helvetica", 14), bg="white", command=open_sensor_data_screen)
+# Function to fetch the latest data from ThingSpeak
+def fetch_sensor_data():
+    url = f"https://api.thingspeak.com/channels/2877004/feeds.json?api_key=00YSVLHONG1542DI&results=1"
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        if data['feeds']:
+            sensor_data = data['feeds'][0]['field1']
+            return float(sensor_data) if sensor_data is not None else None
+    return None
+
+# Create main window
+root = tk.Tk()
+root.title("Water Testing App")
+root.geometry("375x667")  
+root.resizable(False, False)
+
+# Load background image
+bg_image = Image.open("Raster.png").resize((375, 667))
+bg_photo = ImageTk.PhotoImage(bg_image)
+
+canvas = tk.Canvas(root, width=375, height=667)
+canvas.pack(fill="both", expand=True)
+canvas.create_image(187, 333, image=bg_photo, anchor="center")
+
+# Load logo
+logo_image = Image.open("safewaterlogo.png").resize((100, 100))
+logo_photo = ImageTk.PhotoImage(logo_image)
+canvas.create_image(187, 80, image=logo_photo, anchor="center")
+
+# Title Text
+canvas.create_text(187, 160, text="SafeWater Monitor", font=("Glacial-Indifference", 20, "bold"), fill="black")
+canvas.create_text(187, 200, text="Pure Water, Pure Peace\nSafeguarding Your Health, One Drop at a Time", 
+                   font=("Glacial-Indifference", 14), fill="black", anchor ="center", justify="center" )
+
+# Start Measurement Button (Checks connection first)
+
+start_button = tk.Button(root, text="Start Measurement", font=("Glacial-Indifference", 16, "bold"), fg="white", width=20, height =2, relief="ridge", bd=3, command=start_measurement)
 canvas.create_window(187, 300, window=start_button)
 
 # Run Tkinter event loop
 root.mainloop()
-
-
-
-
