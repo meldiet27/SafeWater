@@ -24,7 +24,7 @@ read_api_key = "00YSVLHONG1542DI"
 
 # Function to check if ThingSpeak is receiving data
 def check_sensor_connection():
-    url = f"https://api.thingspeak.com/channels/2877004/feeds.json?api_key=00YSVLHONG1542DI&results=1"
+    url = f"https://api.thingspeak.com/channels/{channel_id}/feeds.json?api_key={read_api_key}&results=1"
     response = requests.get(url)
 
     if response.status_code == 200:
@@ -129,7 +129,7 @@ def open_sensor_data_screen():
 
 # Function to fetch the latest data from ThingSpeak
 def fetch_sensor_data():
-    url = f"https://api.thingspeak.com/channels/2877004/feeds.json?api_key=00YSVLHONG1542DI&results=1"
+    url = f"https://api.thingspeak.com/channels/{channel_id}/feeds.json?api_key={read_api_key}&results=1"
     response = requests.get(url)
     if response.status_code == 200:
         data = response.json()
