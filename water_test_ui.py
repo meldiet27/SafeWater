@@ -7,9 +7,9 @@ import requests
 import threading
 import time
 import serial
-import itertools  # For rotating spinner animation
+import itertools  
 
-# Configure serial connection to Arduino (Update port as needed)
+# Configure serial connection to Arduino 
 try:
     arduino = serial.Serial("/dev/ttyUSB0", 9600, timeout=1)  # Change to correct port
     time.sleep(2)  # Allow connection to initialize
