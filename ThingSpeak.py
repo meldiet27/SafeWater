@@ -19,18 +19,27 @@ def send_data():
 
 # Function to read data from ThingSpeak
 def read_data():
-   url = f"https://api.thingspeak.com/channels/{channel_id}/feeds.json?api_key={read_api_key}&results=1"
-   response = requests.get(url)
-   if response.status_code == 200:
-       data = response.json()
-       if data['feeds']:
-            field1_value = data['feeds'][0]['field1']
-            field2_value = data['feeds'][0]['field2']
-            data_label.config(text=f"Field 1: {field1_value}, Field 2: {field2_value}")
-       else:
-           data_label.config(text="No data available.")
-   else:
-       data_label.config(text="Error reading data.")
+    url = "https://api.thingspeak.com/channels/2877004/feeds.json?results=2"
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        try:
+            if 'feeds' in data and len(data['feeds']) > 0:
+                first_feed = data['feeds'][0]
+                field1_value = first_feed.get('field1')
+                field2_value = first_feed.get('field2')
+                if field1_value is not None:
+                    print(f"Field1 value: {field1_value}")
+                if field2_value is not None:
+                    print(f"Field2 value: {field2_value}")
+            else:
+                print("No feeds found in the API response.")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+    else:
+        print(f"Failed to fetch data. HTTP Status: {response.status_code}")
+
+
 
 # Tkinter window setup
 window = tk.Tk()
@@ -42,7 +51,7 @@ label_field1.grid(row=0, column=0)
 entry_field1 = tk.Entry(window)
 entry_field1.grid(row=0, column=1)
 
-label_field2 = tkasinger.Label(window, text="Field 2:")
+label_field2 = tk.Label(window, text="Field 2:")
 label_field2.grid(row=1, column=0)
 entry_field2 = tk.Entry(window)
 entry_field2.grid(row=1, column=1)
