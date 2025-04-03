@@ -95,7 +95,7 @@ def open_sensor_data_screen():
                 time_values.append(len(time_values) * 0.5)
                 sensor_values.append(sensor_value)
                 ax.clear()
-                ax.plot(time_values, sensor_values, marker="o", linestyle="-", color="blue", label="pH Levels")
+                ax.plot(time_values, sensor_values, marker="o", linestyle="-", color="blue", label="ppm")
                 ax.set_title("Sensor Data Over Time", fontsize=12, fontweight="bold")
                 ax.set_xlabel("Time")
                 ax.set_ylabel("Parts per Million (ppm)")
